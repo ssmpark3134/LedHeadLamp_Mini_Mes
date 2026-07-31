@@ -38,18 +38,49 @@ def get_reactivate_item_list():
     """
     return fetch_all(sql)
 
-# BOM 전체조회 join
-def get_bom_list():
+# BOM
+# 선택한 완제품에 어떤 원자재가 들어가는지 조회
+def get_bom_by_product(product_item_id):
+
     sql = """
-        select b.bom_id, 
-            p.item_name as product_name,
-            m.item_name as material_name,
+        SELECT
+            b.bom_id,
+            b.product_item_id,
+            b.material_item_id,
+            m.item_code AS material_code,
+            m.item_name AS material_name,
             b.required_qty
-        from bom b
-        inner join item p
-            on b.product_item_id = p.item_id
-        inner join item m
-            on b.material_item_id = m.item_id
-        order by b.bom_id
+        FROM bom b
+
+        INNER JOIN item m
+            ON b.material_item_id = m.item_id
+
+        WHERE b.product_item_id = ?
+
+        ORDER BY b.bom_id;
     """
+
+    return fetch_all(
+        sql,
+        (product_item_id,)
+    )
+# 완제품(FG) 목록만 조회
+def get_fg_item_list():
+    sql = """
+        select * from item where item_type='FG'
+        and is_active = 'Y'
+        order by item_id;
+    """
+    return fetch_all(sql)
+# 원자재(RM) 목록만 조회
+def get_rm_item_list():
+
+    sql = """
+        SELECT *
+        FROM item
+        WHERE item_type = 'RM'
+          AND is_active = 'Y'
+        ORDER BY item_id;
+    """
+
     return fetch_all(sql)
