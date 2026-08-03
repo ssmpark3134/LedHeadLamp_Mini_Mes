@@ -3,7 +3,10 @@ import pandas as pd
 from src.queries import (
     get_fg_item_list,
     get_rm_item_list,
-    get_bom_by_product
+    get_bom_by_product,
+    insert_bom,
+    update_bom_qty,
+    delete_bom
 )
 from src.ui import(
     setup_page,
@@ -56,36 +59,93 @@ bom_list = [
     )
 ]
 
-
+# bom 표 확인
 if bom_list:
-
     bom_df = pd.DataFrame(bom_list)
-
     bom_df = bom_df[
         [
+            "bom_id",
             "material_code",
             "material_name",
             "required_qty"
         ]
     ]
-
     bom_df.columns = [
+        "BOM ID",
         "원자재 코드",
         "원자재명",
         "필요 수량"
     ]
+    # 삭제 여부를 선택할 수 있는 컬럼 추가
+    bom_df["삭제"] = False
 
-    st.dataframe(
+    # BOM ID는 내부적으로만 사용하고
+    # 사용자가 수정하지 못하도록 설정한다.
+    edited_bom = st.data_editor(
         bom_df,
         use_container_width=True,
-        hide_index=True
+        hide_index=True,
+        # 수정 불가 컬럼
+        disabled=[
+            "BOM ID",
+            "원자재 코드",
+            "원자재명"
+        ],
+        # 필요 수량을 정수 형태로 입력하도록 설정
+        column_config={
+            "BOM ID": st.column_config.NumberColumn(
+                "BOM ID",
+                disabled=True
+            ),
+            "필요 수량": st.column_config.NumberColumn(
+                "필요 수량",
+                min_value=1,
+                step=1
+            ),
+            "삭제": st.column_config.CheckboxColumn(
+                "삭제",
+                help="삭제할 BOM에 체크하세요."
+            )
+        },
+        key="bom_editor"
     )
+    # 변경사항 저장 버튼
+    if st.button("💾 BOM 변경사항 저장"):
+        update_count = 0
+        delete_count = 0
+        for index, row in edited_bom.iterrows():
+            bom_id = row["BOM ID"]
+            # 삭제 체크
+            if row["삭제"]:
 
+                delete_bom(bom_id)
+                delete_count += 1
+
+                continue
+            # 기존 수량
+            original_qty = bom_df.loc[
+                index,
+                "필요 수량"
+            ]
+            # 변경된 수량
+            new_qty = row["필요 수량"]
+            # 수량이 변경됐을 경우
+            if original_qty != new_qty:
+                update_bom_qty(
+                    bom_id,
+                    new_qty
+                )
+                update_count += 1
+        st.success(
+            f"BOM 변경 완료 "
+            f"(수량 수정: {update_count}건 / 삭제: {delete_count}건)"
+        )
+        st.rerun()
 else:
-
     st.info(
         "현재 등록된 BOM 구성품이 없습니다."
     )
+
 # 원자재 추가용 Session State
 if "bom_materials" not in st.session_state:
     st.session_state.bom_materials = []
@@ -162,8 +222,13 @@ if st.session_state.bom_materials:
             material["material_name"]
         )
         # 필요 수량 출력
-        columns[2].write(
-            material["required_qty"]
+        new_qty = columns[2].number_input(
+            "수량",
+            min_value=1,
+            value=int(material["required_qty"]),
+            step=1,
+            key=f"bom_qty_{index}",
+            label_visibility="collapsed"
         )
         # 삭제 버튼
         if columns[3].button(
@@ -184,4 +249,22 @@ else:
 
     st.info(
         "추가된 원자재가 없습니다."
+    )
+# 완제품에 대한 원자재 세션에 올려둔거 저장 장바구니에 있는거 진짜 저장
+st.divider()
+if st.session_state.bom_materials:
+    if st.button("💾 BOM 저장", type="primary"):
+        insert_bom(
+            selected_fg["item_id"],
+            st.session_state.bom_materials
+        )
+        st.success(
+            f"{selected_fg['item_name']}의 BOM이 저장되었습니다."
+        )
+        # 저장이 완료 됐으니 세션 비우기 기능
+        st.session_state.bom_materials = []
+        st.rerun()
+else:
+    st.info(
+        "저장할 BOM 구성품이 없습니다."
     )
