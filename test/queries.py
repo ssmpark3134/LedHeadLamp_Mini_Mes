@@ -84,3 +84,50 @@ def get_rm_item_list():
     """
 
     return fetch_all(sql)
+# 선택한 완제품에 대한 원자재 등록
+def insert_bom(product_item_id, materials):
+    sql = """
+        INSERT INTO bom (
+            product_item_id,
+            material_item_id,
+            required_qty
+        )
+        VALUES (?, ?, ?);
+    """
+    from src.db import get_connection
+    with get_connection() as connection:
+        for material in materials:
+            connection.execute(
+                sql,
+                (
+                    product_item_id,
+                    material["material_item_id"],
+                    material["required_qty"]
+                )
+            )
+
+        connection.commit()
+# BOM 필요 수량 수정
+def update_bom_qty(bom_id, required_qty):
+    sql = """
+        UPDATE bom
+        SET required_qty = ?
+        WHERE bom_id = ?;
+    """
+    return execute(
+        sql,
+        (
+            required_qty,
+            bom_id
+        )
+    )
+# BOM 삭제
+def delete_bom(bom_id):
+    sql = """
+        DELETE FROM bom
+        WHERE bom_id = ?;
+    """
+    return execute(
+        sql,
+        (bom_id,)
+    )
