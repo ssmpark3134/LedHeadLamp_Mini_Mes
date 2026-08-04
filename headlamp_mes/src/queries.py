@@ -1,47 +1,66 @@
 from src.db import fetch_all, fetch_dataframe, fetch_one, execute
 from datetime import datetime
+from src.db import get_connection
+# ============================================
 # item 조회
+# ============================================
 def get_item_list():
     sql = """
         select * from item where is_active = 'Y' order by item_id;
     """
     return fetch_all(sql)
+
+# ============================================
 # item 등록
+# ============================================
 def insert_item(item_code, item_name, item_type,unit):
     sql = """
         insert into item(item_code, item_name, item_type, unit)
         values (?,?,?,?);
     """
     return execute(sql,(item_code, item_name, item_type,unit))
+
+# ============================================
 # item 수정
+# ============================================
 def update_item(item_id, item_name, item_type, unit):
     sql = """
         update item set item_name=?, item_type=?, unit=? where item_id=?;
     """
     return execute(sql,(item_name, item_type, unit, item_id))
+
+# ============================================
 # item 삭제(삭제라긴 보다는 사용안함으로 변경)
+# ============================================
 def deactivate_item(item_id):
     sql = """
         update item set is_active='N' where item_id=?;
     """
     return execute(sql,(item_id,))
+
+# ============================================
 # item 사용재개
+# ============================================
 def activate_item(item_id):
     sql="""
         update item set is_active='Y' where item_id=?;
     """
     return execute(sql,(item_id,))
+
+# ============================================
 # 사용 N인 제품만 보기
+# ============================================
 def get_reactivate_item_list():
     sql = """
         select * from item where is_active='N' order by item_id;
     """
     return fetch_all(sql)
 
+# ============================================
 # BOM
-# 선택한 완제품에 어떤 원자재가 들어가는지 조회
+# #선택한 완제품에 어떤 원자재가 들어가는지 조회
+# ============================================
 def get_bom_by_product(product_item_id):
-
     sql = """
         SELECT
             b.bom_id,
@@ -64,7 +83,10 @@ def get_bom_by_product(product_item_id):
         sql,
         (product_item_id,)
     )
+
+# ============================================
 # 완제품(FG) 목록만 조회
+# ============================================
 def get_fg_item_list():
     sql = """
         select * from item where item_type='FG'
@@ -72,7 +94,10 @@ def get_fg_item_list():
         order by item_id;
     """
     return fetch_all(sql)
+
+# ============================================
 # 원자재(RM) 목록만 조회
+# ============================================
 def get_rm_item_list():
 
     sql = """
@@ -84,7 +109,10 @@ def get_rm_item_list():
     """
 
     return fetch_all(sql)
+
+# ============================================
 # 선택한 완제품에 대한 원자재 등록
+# ============================================
 def insert_bom(product_item_id, materials):
     sql = """
         INSERT INTO bom (
@@ -107,7 +135,10 @@ def insert_bom(product_item_id, materials):
             )
 
         connection.commit()
+
+# ============================================
 # BOM 필요 수량 수정
+# ============================================
 def update_bom_qty(bom_id, required_qty):
     sql = """
         UPDATE bom
@@ -121,7 +152,10 @@ def update_bom_qty(bom_id, required_qty):
             bom_id
         )
     )
+
+# ============================================
 # BOM 삭제
+# ============================================
 def delete_bom(bom_id):
     sql = """
         DELETE FROM bom
@@ -134,8 +168,8 @@ def delete_bom(bom_id):
 
 # ============================================
 # lot관리
+# # 완제품 품목별 재고 조회
 # ============================================
-# 완제품 품목별 재고 조회
 def get_fg_stock_list():
     # 완제품(FG)의 현재 재고를 품목별로 조회한다.
     # 하나의 완제품에 여러 LOT가 존재할 수 있으므로
@@ -158,8 +192,10 @@ def get_fg_stock_list():
         ORDER BY i.item_id;
     """
     return fetch_all(sql)
+
 # ============================================
 # 원자재 품목별 재고 조회
+# ============================================
 def get_rm_stock_list():
     # 원자재(RM)의 현재 재고를 품목별로 조회한다.
     # 하나의 원자재에 여러 LOT가 존재할 수 있으므로
@@ -182,8 +218,10 @@ def get_rm_stock_list():
         ORDER BY i.item_id
     """
     return fetch_all(sql)
+
 # ============================================
 # LOT 상세 목록 조회
+# ============================================
 def get_lot_list():
     # 전체 LOT 정보를 조회한다.
     # lot 테이블의 item_id를 이용해서
@@ -209,8 +247,10 @@ def get_lot_list():
         ORDER BY i.item_code;
     """
     return fetch_all(sql)
+
 # ============================================
 # LOT 번호 자동 생성
+# ============================================
 def generate_lot_no(item_code):
     # 품목 코드와 오늘 날짜를 이용해서
     # 새로운 LOT 번호를 자동으로 생성한다.
@@ -221,7 +261,7 @@ def generate_lot_no(item_code):
 
     # 오늘 날짜를 YYYYMMDD 형식으로 만든다.
     today = datetime.now().strftime("%Y%m%d")
-    base_code = item_code.rsplit("-", 1)[0]
+    base_code = item_code
     # 오늘 날짜에 생성된 같은 품목의 LOT 개수를 조회한다.
     sql = """
         SELECT COUNT(*)
@@ -241,8 +281,10 @@ def generate_lot_no(item_code):
     sequence = count + 1
     # 최종 LOT 번호를 만든다.
     return f"{base_code}-{today}-{sequence:03d}"
+
 # ============================================
 # LOT 등록
+# ============================================
 def insert_lot(
     item_id,
     lot_qty,
@@ -362,8 +404,10 @@ def insert_production_order(
             "대기"
         )
     )
+
 # ============================================
 # 생산지시 목록 조회
+# ============================================
 def get_production_order_list():
     # 등록된 생산지시 목록을 조회한다.
     # production_order의 product_item_id를
@@ -380,10 +424,12 @@ def get_production_order_list():
         FROM production_order AS po
         JOIN item AS i
             ON po.product_item_id = i.item_id
+        WHERE po.status != '완료'
         ORDER BY po.order_id
     """
 
     return fetch_all(sql)
+
 # ============================================
 # 생산실적 등록
 # ============================================
@@ -394,152 +440,359 @@ def insert_production(
     production_date,
     production_qty
 ):
-    # 생산지시에 대한 실제 생산실적을 등록한다.
-    # 생산실적을 등록하면서 완제품 LOT을 자동 생성하고,
-    # 생성된 LOT의 lot_id를 production.output_lot_id에 연결한다.
-    # order_id:
-    #     생산지시 ID
-    # worker_name:
-    #     생산 작업자
-    # equipment_name:
-    #     생산 설비
-    # production_date:
-    #     실제 생산일
-    # production_qty:
-    #     실제 생산수량
-
-    # ============================================
+    # 생산실적을 등록한다.
+    #
+    # 처리 순서:
     # 1. 생산지시 정보 조회
-    order_sql = """
-        SELECT
-            product_item_id,
-            order_qty
-        FROM production_order
-        WHERE order_id = ?
-    """
-    order = fetch_one(
-        order_sql,
-        (order_id,)
-    )
+    # 2. 완제품 정보 조회
+    # 3. BOM 조회
+    # 4. 생산수량에 필요한 원자재 수량 계산
+    # 5. 원자재 재고 부족 여부 확인
+    # 6. 원자재 LOT를 FIFO 방식으로 차감
+    # 7. 완제품 LOT 생성
+    # 8. production 등록
+    # 9. production_material에 원자재 사용 이력 등록
+    #
+    # 모든 작업은 하나의 트랜잭션으로 처리한다.
+    # 중간에 오류가 발생하면 전체 작업을 취소한다.
+        # ============================================
+        # 1. 생산지시 정보 조회
+        # ============================================
+        order_sql = """
+            SELECT
+                product_item_id,
+                order_qty
+            FROM production_order
+            WHERE order_id = ?
+        """
+
+        order = fetch_one(
+            order_sql,
+            (order_id,)
+        )
 
     # 존재하지 않는 생산지시인지 확인한다.
-    if order is None:
-        raise ValueError("존재하지 않는 생산지시입니다.")
+        if order is None:
+            raise ValueError("존재하지 않는 생산지시입니다.")
 
-    product_item_id = order["product_item_id"]
+        product_item_id = order["product_item_id"]
 
-    # ============================================
-    # 2. 완제품 품목 코드 조회
-    item_sql = """
-    SELECT
-        item_code,
-        item_name,
-        item_type
-    FROM item
-    WHERE item_id = ?
-"""
-    item = fetch_one(
-        item_sql,
-        (product_item_id,)
-    )
-    if item is None:
-        raise ValueError("생산할 완제품을 찾을 수 없습니다.")
-    if item["item_type"] != "FG":
-        raise ValueError(
-            f"생산지시의 품목이 완제품(FG)이 아닙니다: "
-            f"{item['item_code']} / {item['item_name']}"
-    )
-
-    # ============================================
-    # 3. 생산실적 번호 자동 생성
-    today = datetime.now().strftime("%Y%m%d")
-    production_sql = """
-        SELECT COUNT(*)
-        FROM production
-        WHERE production_no LIKE ?
-    """
-    prefix = f"PR-{today}-%"
-    result = fetch_one(
-        production_sql,
-        (prefix,)
-    )
-
-    count = result[0] if result else 0
-    sequence = count + 1
-    production_no = f"PR-{today}-{sequence:03d}"
-
-    # ============================================
-    # 4. 완제품 LOT 자동 생성
-    lot_no = generate_lot_no(
-        item["item_code"]
-    )
-    lot_sql = """
-        INSERT INTO lot (
-            lot_no,
-            item_id,
-            lot_qty,
-            current_qty,
-            produced_date,
-            location
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-    """
-    execute(
-        lot_sql,
-        (
-            lot_no,
-            product_item_id,
-            production_qty,
-            production_qty,
-            production_date,
-            "완제품창고"
-        )
-    )
-
-    # ============================================
-    # 5. 방금 생성한 LOT 조회
-    lot_sql = """
+        # ============================================
+        # 2. 완제품 품목 코드 조회
+        # ============================================
+        item_sql = """
         SELECT
-            lot_id
-        FROM lot
-        WHERE lot_no = ?
-    """
-    lot = fetch_one(
-        lot_sql,
-        (lot_no,)
-    )
-    if lot is None:
-        raise ValueError("완제품 LOT 생성에 실패했습니다.")
-    output_lot_id = lot["lot_id"]
+            item_code,
+            item_name,
+            item_type
+        FROM item
+        WHERE item_id = ?
+        """
+        item = fetch_one(
+            item_sql,
+            (product_item_id,)
+        )
+        if item is None:
+            raise ValueError("생산할 완제품을 찾을 수 없습니다.")
+        if item["item_type"] != "FG":
+            raise ValueError(
+                f"생산지시의 품목이 완제품(FG)이 아닙니다: "
+                f"{item['item_code']} / {item['item_name']}"
+        )
+        # ============================================
+        # 3. BOM 조회
+        # ============================================
+        bom_sql = """
+            SELECT
+                material_item_id,
+                required_qty
+            FROM bom
+            WHERE product_item_id = ?
+            ORDER BY bom_id
+        """
 
-    # ============================================
-    # 6. 생산실적 등록
-    insert_sql = """
-        INSERT INTO production (
-            production_no,
-            order_id,
-            output_lot_id,
-            worker_name,
-            equipment_name,
-            production_date,
-            production_qty,
-            status
+        bom_list = fetch_all(
+            bom_sql,
+            (product_item_id,)
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """
-    execute(
-        insert_sql,
-        (
-            production_no,
-            order_id,
-            output_lot_id,
-            worker_name,
-            equipment_name,
-            production_date,
-            production_qty,
-            "완료"
+
+        if not bom_list:
+            raise ValueError(
+                "해당 완제품의 BOM이 등록되어 있지 않습니다."
+            )
+
+        # ============================================
+        # 4. 생산수량에 필요한 원자재 수량 계산
+        # ============================================
+        material_requirements = []
+
+        for bom in bom_list:
+
+            required_qty = (
+                bom["required_qty"]
+                * production_qty
+            )
+
+            material_requirements.append({
+                "material_item_id": bom["material_item_id"],
+                "required_qty": required_qty
+            })
+
+        # ============================================
+        # 5. 원자재 재고 부족 여부 확인
+        # ============================================
+        for material in material_requirements:
+
+            stock_sql = """
+                SELECT
+                    COALESCE(
+                        SUM(current_qty),
+                        0
+                    ) AS total_stock
+                FROM lot
+                WHERE item_id = ?
+                  AND current_qty > 0
+            """
+
+            stock = fetch_one(
+                stock_sql,
+                (
+                    material["material_item_id"],
+                )
+            )
+
+            total_stock = stock["total_stock"]
+
+            if total_stock < material["required_qty"]:
+
+                material_info_sql = """
+                    SELECT
+                        item_code,
+                        item_name
+                    FROM item
+                    WHERE item_id = ?
+                """
+
+                material_info = fetch_one(
+                    material_info_sql,
+                    (
+                        material["material_item_id"],
+                    )
+                )
+
+                raise ValueError(
+                    f"원자재 재고가 부족합니다.\n"
+                    f"품목: {material_info['item_code']} / "
+                    f"{material_info['item_name']}\n"
+                    f"필요수량: {material['required_qty']:,}개\n"
+                    f"현재재고: {total_stock:,}개"
+                )
+
+        # ============================================
+        # 6. 생산실적 번호 자동 생성
+        # ============================================
+        today = datetime.now().strftime("%Y%m%d")
+        production_sql = """
+            SELECT COUNT(*)
+            FROM production
+            WHERE production_no LIKE ?
+        """
+        prefix = f"PR-{today}-%"
+        result = fetch_one(
+            production_sql,
+            (prefix,)
         )
-    )
+
+        count = result[0] if result else 0
+        sequence = count + 1
+        production_no = f"PR-{today}-{sequence:03d}"
+
+        # ============================================
+        # 7. 원자재 LOT FIFO 차감
+        # ============================================
+        material_usage_list = []
+
+        for material in material_requirements:
+
+            remaining_required = (
+                material["required_qty"]
+            )
+
+            # 오래된 LOT부터 조회
+            lot_sql = """
+                SELECT
+                    lot_id,
+                    current_qty
+                FROM lot
+                WHERE item_id = ?
+                  AND current_qty > 0
+                ORDER BY
+                    COALESCE(received_date, produced_date),
+                    lot_id
+            """
+
+            lots = fetch_all(
+                lot_sql,
+                (
+                    material["material_item_id"],
+                )
+            )
+
+            for lot in lots:
+
+                if remaining_required <= 0:
+                    break
+
+                available_qty = lot["current_qty"]
+
+                used_qty = min(
+                    available_qty,
+                    remaining_required
+                )
+
+                # 원자재 LOT 재고 차감
+                update_lot_sql = """
+                    UPDATE lot
+                    SET current_qty = current_qty - ?
+                    WHERE lot_id = ?
+                """
+
+                fetch_one(
+                    update_lot_sql,
+                    (
+                        used_qty,
+                        lot["lot_id"]
+                    )
+                )
+
+                # 나중에 production_material에 기록하기 위해 저장
+                material_usage_list.append({
+                    "material_item_id":
+                        material["material_item_id"],
+
+                    "material_lot_id":
+                        lot["lot_id"],
+
+                    "used_qty":
+                        used_qty
+                })
+
+                remaining_required -= used_qty
+
+        # ============================================
+        # 8. 완제품 LOT 자동 생성
+        # ============================================
+        lot_no = generate_lot_no(
+            item["item_code"]
+        )
+        lot_sql = """
+            INSERT INTO lot (
+                lot_no,
+                item_id,
+                lot_qty,
+                current_qty,
+                produced_date,
+                location
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+        """
+        fetch_one(
+            lot_sql,
+            (
+                lot_no,
+                product_item_id,
+                production_qty,
+                production_qty,
+                production_date,
+                "완제품창고"
+            )
+        )
+
+        # ============================================
+        # 9. 방금 생성한 LOT 조회
+        # ============================================
+        lot_id_sql = """
+            SELECT
+                lot_id
+            FROM lot
+            WHERE lot_no = ?
+        """
+        lot = fetch_one(
+            lot_id_sql,
+            (lot_no,)
+        )
+        if lot is None:
+            raise ValueError("완제품 LOT 생성에 실패했습니다.")
+        output_lot_id = lot["lot_id"]
+
+        # ============================================
+        # 10. production 등록
+        # ============================================
+        insert_production_sql = """
+            INSERT INTO production (
+                production_no,
+                order_id,
+                output_lot_id,
+                worker_name,
+                equipment_name,
+                production_date,
+                production_qty,
+                status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        execute(
+            insert_production_sql,
+            (
+                production_no,
+                order_id,
+                output_lot_id,
+                worker_name,
+                equipment_name,
+                production_date,
+                production_qty,
+                "완료"
+            )
+        )
+        # ============================================
+        # 11. 방금 등록한 production_id 조회
+        # ============================================
+        production_id = fetch_one(
+            "SELECT last_insert_rowid()"
+        )
+
+        # ============================================
+        # 12. production_material 등록
+        # ============================================
+        insert_material_sql = """
+            INSERT INTO production_material (
+                production_id,
+                material_item_id,
+                material_lot_id,
+                used_qty
+            )
+            VALUES (?, ?, ?, ?)
+        """
+
+        for usage in material_usage_list:
+
+            fetch_one(
+                insert_material_sql,
+                (
+                    production_id,
+                    usage["material_item_id"],
+                    usage["material_lot_id"],
+                    usage["used_qty"]
+                )
+            )
+        st.commit()
+        return {
+            "production_id": production_id,
+            "production_no": production_no,
+            "lot_no": lot_no,
+            "production_qty": production_qty
+        }
+    
 
 # ============================================
 # 생산지시별 생산실적 조회
@@ -564,6 +817,7 @@ def get_production_order_progress(order_id):
         sql,
         (order_id,)
     )
+
 # ============================================
 # 생산지시 상태 변경
 # ============================================
@@ -584,6 +838,92 @@ def update_production_order_status(
             order_id
         )
     )
+
+# ============================================
+# 오늘 생산현황 조회
+# ============================================
+def get_today_production_list():
+    # 오늘 날짜에 등록된 생산실적 조회
+    # 생산실적 번호, 완제품, 작업자, 설비, 생산수량, 생산일을 같이 가져옴
+    today=datetime.now().strftime("%Y-%m-%d")
+    sql = """
+        SELECT 
+            p.production_id,
+            p.production_no,
+            i.item_code,
+            i.item_name,
+            p.worker_name,
+            p.equipment_name,
+            p.production_qty,
+            p.production_date
+        FROM production AS p
+
+        JOIN production_order AS po
+            ON p.order_id = po.order_id
+        JOIN item AS i
+            ON po.product_item_id = i.item_id
+        WHERE p.production_date = ?
+        ORDER BY p.production_id DESC
+    """
+    return fetch_all(sql,(today,))
+
+# ============================================
+# 남은 작업지시 조회
+# ============================================
+def get_remaining_production_order_list():
+    sql = """
+        SELECT
+            po.order_id,
+            po.order_no,
+            i.item_code,
+            i.item_name,
+            po.order_qty,
+
+            COALESCE(
+                SUM(p.production_qty),
+                0
+            ) AS produced_qty,
+
+            po.order_qty
+            - COALESCE(
+                SUM(p.production_qty),
+                0
+            ) AS remaining_qty,
+
+            po.due_date,
+            po.status
+
+        FROM production_order AS po
+
+        JOIN item AS i
+            ON po.product_item_id = i.item_id
+
+        LEFT JOIN production AS p
+            ON po.order_id = p.order_id
+
+        WHERE po.status != '완료'
+
+        GROUP BY
+            po.order_id,
+            po.order_no,
+            i.item_code,
+            i.item_name,
+            po.order_qty,
+            po.due_date,
+            po.status
+
+        HAVING
+            po.order_qty
+            - COALESCE(
+                SUM(p.production_qty),
+                0
+            ) > 0
+
+        ORDER BY
+            po.due_date,
+            po.order_id
+    """
+    return fetch_all(sql)
 
 # ============================================
 # 품질검사 등록
@@ -666,6 +1006,7 @@ def insert_quality(
             inspection_date
         )
     )
+
 # ============================================
 # 품질검사 대상 생산실적 조회
 # ============================================
@@ -920,7 +1261,6 @@ def get_forward_lot_tracking(material_lot_id):
 # ============================================
 # 역방향 LOT 추적
 # ============================================
-
 def get_backward_lot_tracking(output_lot_id):
     # 완제품 LOT → 생산 → 원자재 LOT
     # + 완제품 LOT의 출하정보
@@ -988,10 +1328,10 @@ def get_backward_lot_tracking(output_lot_id):
         sql,
         (output_lot_id,)
     )
+
 # ============================================
 # LOT 선택 목록 조회
 # ============================================
-
 def get_lot_tracking_list():
     # LOT 추적 화면에서 LOT를 선택하기 위한
     # 기본 LOT 목록을 조회한다.
