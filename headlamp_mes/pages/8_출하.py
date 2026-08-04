@@ -104,8 +104,7 @@ if st.button(
     # 출하수량이 현재 재고를 초과하는지 확인
     if shipment_qty > selected_lot["current_qty"]:
         st.warning(
-            "출하수량이 현재 LOT 재고를 "
-            "초과할 수 없습니다."
+            "출하수량이 현재 LOT 재고를 초과할 수 없습니다."
         )
         st.stop()
 
