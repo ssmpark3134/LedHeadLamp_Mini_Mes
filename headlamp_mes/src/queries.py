@@ -431,17 +431,24 @@ def insert_production(
     # ============================================
     # 2. 완제품 품목 코드 조회
     item_sql = """
-        SELECT
-            item_code
-        FROM item
-        WHERE item_id = ?
-    """
+    SELECT
+        item_code,
+        item_name,
+        item_type
+    FROM item
+    WHERE item_id = ?
+"""
     item = fetch_one(
         item_sql,
         (product_item_id,)
     )
     if item is None:
         raise ValueError("생산할 완제품을 찾을 수 없습니다.")
+    if item["item_type"] != "FG":
+        raise ValueError(
+            f"생산지시의 품목이 완제품(FG)이 아닙니다: "
+            f"{item['item_code']} / {item['item_name']}"
+    )
 
     # ============================================
     # 3. 생산실적 번호 자동 생성
@@ -843,3 +850,169 @@ def insert_shipment(
             lot_id
         )
     )
+
+# ============================================
+# 정방향 LOT 추적
+# ============================================
+def get_forward_lot_tracking(material_lot_id):
+    # 원자재 LOT를 기준으로 정방향 추적한다.
+    # 원자재 LOT
+    #     ↓
+    # production_material
+    #     ↓
+    # production
+    #     ↓
+    # 완제품 LOT
+    #     ↓
+    # shipment
+    # 하나의 원자재 LOT가 여러 생산에 사용될 수 있으므로
+    # 여러 개의 행을 반환한다.
+    sql = """
+        SELECT
+            rm_lot.lot_no AS material_lot_no,
+            rm_item.item_code AS material_code,
+            rm_item.item_name AS material_name,
+
+            pm.used_qty,
+
+            p.production_no,
+            p.production_date,
+            p.worker_name,
+            p.equipment_name,
+            p.production_qty,
+
+            fg_lot.lot_id AS output_lot_id,
+            fg_lot.lot_no AS output_lot_no,
+            fg_item.item_code AS output_item_code,
+            fg_item.item_name AS output_item_name,
+            fg_lot.lot_qty AS output_lot_qty,
+            fg_lot.current_qty AS output_current_qty,
+            fg_lot.location AS output_location
+
+        FROM production_material AS pm
+
+        JOIN lot AS rm_lot
+            ON pm.material_lot_id = rm_lot.lot_id
+
+        JOIN item AS rm_item
+            ON pm.material_item_id = rm_item.item_id
+
+        JOIN production AS p
+            ON pm.production_id = p.production_id
+
+        JOIN lot AS fg_lot
+            ON p.output_lot_id = fg_lot.lot_id
+
+        JOIN item AS fg_item
+            ON fg_lot.item_id = fg_item.item_id
+
+        WHERE pm.material_lot_id = ?
+
+        ORDER BY
+            p.production_date,
+            p.production_id
+    """
+    return fetch_all(
+        sql,
+        (material_lot_id,)
+    )
+
+# ============================================
+# 역방향 LOT 추적
+# ============================================
+
+def get_backward_lot_tracking(output_lot_id):
+    # 완제품 LOT → 생산 → 원자재 LOT
+    # + 완제품 LOT의 출하정보
+    sql = """
+        SELECT
+            fg_lot.lot_no AS output_lot_no,
+            fg_item.item_code AS output_item_code,
+            fg_item.item_name AS output_item_name,
+
+            p.production_no,
+            p.production_date,
+            p.worker_name,
+            p.equipment_name,
+            p.production_qty,
+
+            rm_item.item_code AS material_code,
+            rm_item.item_name AS material_name,
+
+            rm_lot.lot_no AS material_lot_no,
+            rm_lot.lot_qty AS material_lot_qty,
+            rm_lot.current_qty AS material_current_qty,
+            rm_lot.location AS material_location,
+
+            pm.used_qty,
+
+            -- 출하정보
+            s.customer_name,
+            s.customer_po,
+            s.shipment_qty,
+            s.shipment_date
+
+        FROM production AS p
+
+        -- 생산된 완제품 LOT
+        JOIN lot AS fg_lot
+            ON p.output_lot_id = fg_lot.lot_id
+
+        -- 완제품 품목
+        JOIN item AS fg_item
+            ON fg_lot.item_id = fg_item.item_id
+
+        -- 생산에 사용된 원자재
+        JOIN production_material AS pm
+            ON p.production_id = pm.production_id
+
+        -- 원자재 품목
+        JOIN item AS rm_item
+            ON pm.material_item_id = rm_item.item_id
+
+        -- 실제 사용된 원자재 LOT
+        JOIN lot AS rm_lot
+            ON pm.material_lot_id = rm_lot.lot_id
+
+        -- 출하정보
+        LEFT JOIN shipment AS s
+            ON s.lot_id = fg_lot.lot_id
+
+        WHERE p.output_lot_id = ?
+
+        ORDER BY
+            pm.production_material_id
+    """
+
+    return fetch_all(
+        sql,
+        (output_lot_id,)
+    )
+# ============================================
+# LOT 선택 목록 조회
+# ============================================
+
+def get_lot_tracking_list():
+    # LOT 추적 화면에서 LOT를 선택하기 위한
+    # 기본 LOT 목록을 조회한다.
+    # 완제품(FG)과 원자재(RM)를 모두 조회한다.
+    sql = """
+        SELECT
+            l.lot_id,
+            l.lot_no,
+            l.item_id,
+            i.item_code,
+            i.item_name,
+            i.item_type,
+            l.lot_qty,
+            l.current_qty,
+            l.received_date,
+            l.produced_date,
+            l.expire_date,
+            l.location
+        FROM lot AS l
+        JOIN item AS i
+            ON l.item_id = i.item_id
+        ORDER BY l.lot_id
+    """
+    return fetch_all(sql)
