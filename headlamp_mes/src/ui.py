@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 from src.db import DB_PATH, database_exists
 import matplotlib.pyplot as plt
-font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+import matplotlib.font_manager as fm
 
 # ============================================
 # page_config를 제목함수로 수정
@@ -61,5 +61,16 @@ def row_to_dict(row):
 # 글꼴
 
 def setup_matplotlib():
-    plt.rcParams["font.family"] = "NanumGothic"
+    font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+
+    # 폰트 등록
+    fm.fontManager.addfont(font_path)
+
+    # 등록된 폰트 이름 확인
+    font_name = fm.FontProperties(fname=font_path).get_name()
+
+    # Matplotlib 전체에 적용
+    plt.rcParams["font.family"] = font_name
+
+    # 마이너스 기호 깨짐 방지
     plt.rcParams["axes.unicode_minus"] = False
