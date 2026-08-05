@@ -542,16 +542,6 @@ try:
                         )
                     )
 
-
-                ax.set_yticks(
-                    range(len(chart_df))
-                )
-
-                ax.set_yticklabels(
-                    chart_df["item_name"]
-                )
-
-
                 ax.set_xlabel(
                     "수량 (EA)"
                 )
